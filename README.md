@@ -16,13 +16,13 @@
 
 ### Sobre o projeto
 
-Você já imaginou ter um hub completo de informações sobre a Fórmula E em português? Esse projeto foi criado exatamente para isso! Combinando o poder do Arduino e Python, nosso objetivo é popularizar a Fórmula E no Brasil, fornecendo um ponto centralizado para todas as informações que você precisa sobre essa emocionante categoria de corrida.
+Você já imaginou ter um hub completo de informações sobre a Fórmula E em português? Esse projeto foi criado exatamente para isso! Nosso objetivo é popularizar a Fórmula E no Brasil, fornecendo um ponto centralizado para todas as informações que você precisa sobre essa emocionante categoria de corrida.
 
 ### Funcionalidades do Projeto
 
-- **Informações em Tempo Real**: Monitore a temperatura, velocidade e o consumo energético de um veículo em tempo real usando sensores integrados ao Arduino.
 - **Próximos Eventos**: Fique por dentro dos próximos eventos da Fórmula E com detalhes sobre datas, locais e horários.
-- **Equipes e Pilotos**: Acesse informações detalhadas sobre as equipes e pilotos, incluindo probabilidades de vitória, posição, pontos e muito mais.
+- **Equipes**: Acesse informações detalhadas sobre as equipes, incluindo probabilidades de vitória, posição, pontos e muito mais.
+- **Pilotos**: Conheça os pilotos da Fórmula E, incluindo detalhes sobre suas equipes, nacionalidade, pontos, vitórias e muito mais.
 
 
 ### Objetivo do Projeto
