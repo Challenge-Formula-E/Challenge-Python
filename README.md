@@ -5,11 +5,6 @@
   - [Funcionalidades do Projeto](#funcionalidades-do-projeto)
   - [Objetivo do Projeto](#objetivo-do-projeto)
   - [Execução do projeto](#execução-do-projeto)
-- [Circuito de Sensores - Edge](#circuito-de-sensores---edge)
-   - [Sobre o Projeto](#sobre-o-projeto-1)
-   - [Objetivo do Projeto](#objetivo-do-projeto-1)
-   - [Simulação do Circuito](#simulação-do-circuito)
-   - [Lista de componentes](#lista-de-componentes)
 - [Integrantes do grupo](#integrantes-do-grupo)
 
 ## Hub de informações - Python
