@@ -1,226 +1,337 @@
 import os
 import requests
 import time
-import msvcrt
+import flet as ft
 from dotenv import load_dotenv
 from datetime import datetime, timezone, timedelta
-from colorama import Fore, Style, Back, init
-import serial  # Importa a biblioteca serial
 
-def main():
-    init()
+def main(page: ft.Page):
+    page.title = "Hub da Formula E"
+    page.window.width = 450
+    page.window.height = 700
+    page.window.maximizable = False
+    page.vertical_alignment = "center"
+    page.horizontal_alignment = "center"
     load_dotenv()  # Carrega as variáveis de ambiente
-    print(f"{Fore.GREEN}Bem-vindo ao programa de telemetria do Arduino!{Style.RESET_ALL}")
-    print(f"{Fore.YELLOW}Carregando informações iniciais...{Style.RESET_ALL}")
     apiKey = os.getenv("API_KEY")  # Atribui o valor da variável de ambiente API_KEY à variável apiKey
-    seasonID = most_recent_season_ID(get_seasons(apiKey))  # Chama a função most_recent_season_ID() e armazena o retorno na variável seasonID
-    time.sleep(1)  # Aguarda 1 segundo
-    stage_infos = get_stage_infos(seasonID, apiKey)  # Chama a função get_stage_infos() e armazena o retorno na variável stage_infos
-    menu = [
-        {"id": 1, "title": "Ver próximo evento da Formula E"},
-        {"id": 2, "title": "Ver informações sobre as equipes/pilotos da Formula E"},
-        {"id": 3, "title": "Ver a probabilidade das equipes ganharem da Formula E"},
-        {"id": 4, "title": "Ver dados de telemetria do Arduino"},
-        {"id": 5, "title": "Sair"},
-    ]
-    while True:
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print(Fore.CYAN + Style.BRIGHT + "*" * 50)
-        print("Bem-vindo às informações sobre a Fórmula E!")
-        print("*" * 50)
-        print(f"{Fore.YELLOW}Escolha uma opção: {Style.NORMAL}")
-        for item in menu:
-            print(f"{item['id']} - {item['title']}")  # Imprime o menu
-        option = input("Digite o número da opção desejada: ")  # Pede ao usuário para digitar a opção desejada
-        option = int(option) if option.isdigit() else 0
-        os.system('cls' if os.name == 'nt' else 'clear')  # Limpa a tela
-        match option:
-            case 1:
-                closestEvent = closest_event(stage_infos)
-                print(Fore.GREEN + f"{'*'*50}\n\nO evento mais próximo da Formula E ocorrerá em {closestEvent['scheduled'].strftime('%d/%m/%Y %H:%M')}." +
-                      f"\nO evento acontecerá no {closestEvent['venue']['name']}, em {closestEvent['venue']['city']}, {closestEvent['venue']['country']}\n\n{'*'*50}." + Style.RESET_ALL)
-            case 2:
-                show_teams(stage_infos)
-            case 3:
-                print(Fore.GREEN + Style.BRIGHT + "Probabilidade de vitória das equipes da Formula E:\n" + Style.RESET_ALL + Fore.LIGHTYELLOW_EX)
-                for i, team in enumerate(get_teams_win_probabilities(seasonID, apiKey)):
-                    print(f"{i+1}. {team['name']} - {team['probability']}%\n{'-'*50}")
-            case 4:
-                read_telemetry_data()
-            case 5:
+    try:
+        seasons = get_seasons(apiKey)  # Chama a função get_seasons() e armazena o retorno na variável seasons
+        seasonID = most_recent_season_ID(seasons)  # Chama a função most_recent_season_ID() e armazena o retorno na variável seasonID
+        time.sleep(1)  # Aguarda 1 segundo
+        stage_infos = get_stage_infos(apiKey, seasonID)
+        closestEvent = closest_event(stage_infos)
+        teams_win_probabilities = get_teams_win_probabilities(apiKey, seasonID)
+    except requests.exceptions.HTTPError as error:
+        fatal_error("Erro ao acessar a API", f"Ocorreu um erro ao acessar a API da Formula E\n\n{error}")
+        return
+    
+    def reload_app(e):
+        page.controls.clear()
+        page.update()
+        main(page) 
+        
+    def fechar_app(e):
+        page.window.destroy()
+        
+    def fatal_error(msg, error):
+        error_dialog = ft.AlertDialog(
+            title=ft.Text(msg),
+            content=ft.Text(error),
+            actions=[ft.TextButton("Fechar App", on_click=fechar_app), ft.TextButton("Recarregar App", on_click=reload_app)]
+        )
+        page.overlay.append(error_dialog)
+        error_dialog.open = True
+        page.update()
+    
+    
+    def show_probability():
+        for i, team in enumerate(teams_win_probabilities):
+            win_probabilities.content.content.controls.append(ft.Text(value=(f"- {team['name']} - {team['probability']}%"), size=18, text_align=ft.TextAlign.LEFT, weight=ft.FontWeight.BOLD, color=ft.colors.PRIMARY))
+        
+    def default_text(text, color=ft.colors.SECONDARY, weight=ft.FontWeight.W_500):
+        return ft.Text(
+            value=text,
+            size=18,
+            text_align=ft.TextAlign.LEFT,
+            color=color,
+            weight=weight
+        )
+        
+    def default_title(text):
+        return ft.Text(
+            value=text,
+            size=24,
+            text_align=ft.TextAlign.START,
+            weight=ft.FontWeight.BOLD,
+            color=ft.colors.SECONDARY
+        )
+        
+    
+    def events_infos(title, text):
+        return ft.Column(controls=[default_text(title, ft.colors.INVERSE_SURFACE, ft.FontWeight.BOLD), default_text(text)])
+        
+    def create_team_rows(title, text):
+        return ft.Row(
+            controls=[default_text(title, ft.colors.INVERSE_SURFACE, ft.FontWeight.BOLD), default_text(text)],
+            alignment=ft.MainAxisAlignment.START,
+        )
+        
+        
+    def verify_event():
+        if  closestEvent == [] or closestEvent['id'] == None:
+            return [
+                ft.Text(
+                    value="Não há eventos agendados ou está ocorrendo a transição de temporadas",
+                    size=24,
+                    text_align=ft.TextAlign.LEFT,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.colors.ERROR
+                )
+            ]
+        else:
+            return [
+                events_infos("Data e Hora: ", closestEvent['scheduled'].strftime('%d/%m/%Y %H:%M')),
+                events_infos("Local: ", closestEvent['venue']['name']),
+                events_infos("Cidade: ", closestEvent['venue']['city']),
+                events_infos("País: ", closestEvent['venue']['country']),
+            ]
+    
+    def selecionar_equipe(e, teams_container):
+        teams_container.controls.clear()
+        for team in stage_infos['teams']:
+            if team['name'] == e.control.value:
+                selected_team = team
                 break
-            case _:
-                print(Fore.RED + Style.BRIGHT + "Opção inválida")
-        print(Fore.RED + "Digite qualquer tecla para voltar ao menu")
-        input()
-        os.system('cls' if os.name == 'nt' else 'clear')  # Limpa a tela
+        team_result = selected_team['result']
+        team_itens = [
+            ("Nome: ", selected_team['name']),
+            ("País: ", selected_team['nationality']),
+            ("Pontos nessa temporada: ", team_result.get('points', '0')),
+            ("Posição no campeonato: ", f"{team_result.get('position', 'N/A')}º lugar"),
+            ("Vitórias: ", team_result.get('wins', '0')),
+            ("Pódios: ", team_result.get('podiums', '0')),
+            ("Voltas mais rápidas: ", team_result.get('fastest_laps', '0')),
+            ("Pole Positions: ", team_result.get('pole_positions', '0')),
+        ]
+        for item in team_itens:
+            teams_container.controls.append(create_team_rows(item[0], item[1]))
+        teams_container.controls.append(ft.Text(
+            value="Pilotos:",
+            size=20,
+            text_align=ft.TextAlign.LEFT,
+            color=ft.colors.INVERSE_SURFACE,
+            weight=ft.FontWeight.BOLD
+        ))
+        for driver in selected_team['competitors']:
+            driver_result = driver['result']
+            teams_container.controls.append(ft.Text(
+                value=f"{driver_result.get('position', 'N/A')}º lugar - {driver_result.get('car_number', 'N/A')} - {' '.join(reversed(driver['name'].split(', ')))} - {driver['nationality']}",
+                size=18,
+                text_align=ft.TextAlign.LEFT,
+                color=ft.colors.SECONDARY,
+                weight=ft.FontWeight.W_500
+            ))
+        teams_container.update()
+    
+    def clear_stack():
+        _stack_main.controls.clear()
+        _stack_main.update()
+        
+    def on_page_resize(e):
+        next_event.height = page.window.height - 140
+        teams.height = page.window.height - 140
+        win_probabilities.height = page.window.height - 140
+        page.update()  # Atualiza a página para aplicar as mudanças
+    
+    page.on_resized = on_page_resize
+    
+    def render_next_event():
+        _stack_main.controls.append(next_event)
+        page.update()
+        next_event.content = ft.Container(
+            content=ft.Column(
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[
+                    default_title("Próximo Evento da Formula E"),
+                    ft.Divider(height=10, thickness=2),  # Adicionando um divisor
+                    ft.Column(
+                        scroll=ft.ScrollMode.AUTO,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.START,
+                        controls=verify_event()
+                    )
+                ]
+            ),
+            padding=20,
+            border_radius=15,
+            expand=True
+        )
+        
+    def render_teams():
+        _stack_main.controls.append(teams)
+        teams_container = ft.Column(
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
+            scroll= "always"
+        )
+        teams.content = ft.Container(
+            content=ft.Column(
+                scroll=ft.ScrollMode.AUTO,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[
+                    default_title("Equipes da Formula E"),
+                    ft.Divider(height=10, thickness=2),  # Adicionando um divisor
+                    ft.Column(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.START,
+                        scroll=ft.ScrollMode.AUTO,
+                        controls=[
+                            ft.Dropdown(
+                                label="Selecione uma equipe",
+                                options=[ft.dropdown.Option(team['name']) for team in stage_infos['teams']],  # Aqui usamos um 'for' para criar as opções
+                                on_change=lambda e: selecionar_equipe(e, teams_container)  # Função que será chamada quando o valor do Dropdown mudar
+                            ),
+                            ft.Container(height=20)
+                        ]
+                    ),
+                    teams_container
+                ]
+            ),
+            padding=20,
+            border_radius=15,
+            expand=True,
+        )
+        
+    def render_win_probabilities():
+        _stack_main.controls.append(win_probabilities)
+        win_probabilities.content = ft.Container(
+            content=ft.Column(
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[
+                    default_title("Probabilidade de Vitória das Equipes"),
+                    ft.Divider(height=10, thickness=2),  # Adicionando um divisor
+                    ft.Column(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.START,
+                        scroll=ft.ScrollMode.AUTO,
+                    )
+                ]
+            ),
+            padding=20,
+            border_radius=15,
+            expand=True
+        )
+        show_probability()
+        
+    def navHandler(e):
+        selected_index = e.control.selected_index
+        page.update()
+        clear_stack() 
+        if selected_index == 0:
+            render_next_event()
+        elif selected_index == 1:
+            render_teams()
+        elif selected_index == 2:
+            render_win_probabilities()
+        page.update()
+        
+        
+    page.navigation_bar = ft.NavigationBar(
+        on_change=navHandler,
+        destinations=[
+            ft.NavigationBarDestination(icon=ft.icons.ACCESS_TIME_FILLED, label="Próximo Evento"),
+            ft.NavigationBarDestination(icon=ft.icons.GROUPS, label="Equipes"),
+            ft.NavigationBarDestination(icon=ft.icons.PERCENT, label="Chance de Vitória"),
+        ]
+    )
+    
+    def default_container(text):
+        return ft.Container(
+            border_radius=10,
+            alignment=ft.alignment.center,
+            content=ft.Text(text),
+            expand=True
+        )    
+    
+    next_event = default_container("Próximo Evento")
+    teams = default_container("Equipes")
+    win_probabilities = default_container("Probabilidade de Vitória")
+        
+    _main = ft.Container(
+        width=450,
+        alignment=ft.alignment.center,
+        expand=True,
+        content=ft.Column(
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Text(
+                    value="Bem-vindo ao Hub da Formula E",
+                    size=24,
+                    text_align=ft.TextAlign.CENTER,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                ft.Text(
+                    value="Selecione uma opção no menu abaixo para continuar",
+                    text_align=ft.TextAlign.CENTER,
+                    size=18
+                )
+            ]
+        )  
+    )
+    
+    _stack_main = ft.Stack(
+        controls=[
+            _main
+        ]    
+    )
 
-def format_and_display_data(temperature, battery_usage, velocity):
-    os.system('cls' if os.name == 'nt' else 'clear')
-    print(Fore.GREEN + Style.BRIGHT + "Dados de Telemetria do Arduino (Digite 'q' para sair):\n" + Style.RESET_ALL)
-    if temperature:
-        print(Fore.CYAN + temperature + Style.RESET_ALL)
-    if velocity:
-        print(Fore.MAGENTA + velocity + Style.RESET_ALL)
-    if battery_usage:
-        print(Fore.YELLOW + battery_usage + Style.RESET_ALL)
-
-def read_telemetry_data():
-    porta = input(Fore.YELLOW + "Digite a porta serial do Arduino (Exemplo: COM5): " + Style.RESET_ALL)
-    try:
-        ser = serial.Serial(porta, 9600, timeout=1) 
-    except serial.SerialException as e:
-        print(Fore.RED + "Erro ao abrir a porta serial: " + str(e) + Style.RESET_ALL)
-        return
-    except Exception as e:
-        print(Fore.RED + "Erro inesperado: " + str(e) + Style.RESET_ALL)
-        return
-
-    print(Fore.GREEN + Style.BRIGHT + "Dados de Telemetria do Arduino (Digite 'q' para sair):\n" + Style.RESET_ALL)
-    time.sleep(2)  # Aguarda a inicialização da porta serial
-
-    try:
-        buffer = ""
-        temperature = ""
-        velocity = ""
-        battery_usage = ""
-        last_data_time = time.time()
-        while True:
-            # Verifica se há dados disponíveis na porta serial
-            if ser.in_waiting > 0:
-                try:
-                    buffer += ser.read(ser.in_waiting).decode('utf-8')
-                except UnicodeDecodeError:
-                    buffer += ser.read(ser.in_waiting).decode('latin-1')
-                    
-                last_data_time = time.time()    
-
-                # Verifica se há uma linha completa no buffer
-                if '\n' in buffer:
-                    lines = buffer.split('\n')
-                    for line in lines[:-1]:
-                        if 'Temperatura' in line:
-                            temperature = line.strip()
-                        elif 'Velocidade' in line:
-                            velocity = line.strip()
-                        elif 'Uso da bateria' in line:
-                            battery_usage = line.strip()
-                    
-                    # Mantém a última linha incompleta no buffer
-                    buffer = lines[-1]
-
-                    # Exibe os dados quando ambos estão disponíveis
-                    if temperature and battery_usage and velocity:
-                        format_and_display_data(temperature, battery_usage, velocity)
-                        temperature = ""
-                        velocity = ""
-                        battery_usage = ""
-            else:
-                # Verifica se passou mais de 5 segundos sem receber dados
-                if time.time() - last_data_time > 5:
-                    print(Fore.RED + "Erro: Nenhum dado recebido. Verifique a conexão do Arduino e a porta serial." + Style.RESET_ALL)
-                    break
-
-            # Verifica se há entrada do usuário
-            if msvcrt.kbhit():
-                user_input = msvcrt.getch().decode('utf-8')
-                if user_input == 'q':  # Digite 'q' para sair
-                    break
-    except KeyboardInterrupt:
-        pass
-    finally:
-        ser.close()
-        print(Fore.RED + "Porta serial fechada." + Style.RESET_ALL)
+    page.add(_stack_main)
+    
+def most_recent_season_ID(seasons):  # Retorna o ID da temporada mais recente
+    return seasons["stages"][0]["id"]  # Retorna o ID da temporada mais recente
 
 def get_seasons(apiKey):  # Retorna um objeto com todas as temporadas
-    try:
-        url = f"https://api.sportradar.com/formulae/trial/v2/pt/seasons.json?api_key={apiKey}"  # Define a URL da API
-        headers = {"accept": "application/json"}  # Define o cabeçalho da requisição
-        response = requests.get(url, headers=headers)  # Faz a requisição GET
-        response.raise_for_status()  # Levanta exceção para status de erro HTTP
-        data = response.json()  # Converte o JSON para um objeto
-    except requests.exceptions.RequestException as e:
-        print(Fore.RED + "Erro na requisição da API")
-        print(e)
-        exit()
-    return data  # Retorna o objeto com as temporadas
+    url = f"https://api.sportradar.com/formulae/trial/v2/pt/seasons.json?api_key={apiKey}"  # Define a URL da API
+    headers = {"accept": "application/json"}  # Define o cabeçalho da requisição
+    response = requests.get(url, headers=headers)  # Faz a requisição GET
+    response.raise_for_status()  # Levanta exceção para status de erro HTTP
+    return response.json()  # Converte o JSON para um objeto
+
+def get_stage_infos(apiKey, seasonID):  # Retorna um objeto com as equipes
+    url = f"https://api.sportradar.com/formulae/trial/v2/pt/sport_events/{seasonID}/summary.json?api_key={apiKey}"
+    headers = {"accept": "application/json"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    if datetime.fromisoformat(data['stage']['scheduled_end']) < datetime.now(timezone.utc):
+        data['stage']['id'] = None
+    return data['stage']  # Retorna o objeto com as equipes
+
+def get_teams_win_probabilities(apiKey, seasonID):  # Retorna um objeto com as probabilidades de vitória das equipes
+    url = f"https://api.sportradar.com/formulae/trial/v2/pt/sport_events/{seasonID}/probabilities.json?api_key={apiKey}"
+    headers = {"accept": "application/json"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    return data['probabilities']['markets'][0]['outcomes']  # Retorna o objeto com as equipes
 
 def closest_event(events):
     timezone_br = timezone(timedelta(hours=-3))
     # Converte a data de string para datetime e ajusta o fuso horário para o horário de Brasília
-    try:
+    if events['id'] == None:
+        return []
+    else:
         for stage in events['stages']:
             stage['scheduled'] = datetime.fromisoformat(stage["scheduled"]).astimezone(timezone_br)
-    except KeyError:
-        print(Fore.RED + "Erro na requisição da API")
-        print("Não foi possível encontrar a chave 'scheduled' no JSON")
-        print("Reinicie o programa e tente novamente")
-        exit()
+        events_sorted = sorted(events['stages'], key=lambda x: x["scheduled"])  # Ordena os eventos da data mais próxima para a mais distante
+        now = datetime.now(timezone_br)  # Pega a data e hora atual
+        # Encontra a data mais próxima de acontecer
+        closest_event = min(events_sorted, key=lambda x: (x["scheduled"] - now).total_seconds() if x["scheduled"] > now else float('inf'))
+        # Retorna o evento mais próximo de acontecer
+        return closest_event
 
-    events_sorted = sorted(events['stages'], key=lambda x: x["scheduled"])  # Ordena os eventos da data mais próxima para a mais distante
-    now = datetime.now(timezone_br)  # Pega a data e hora atual
-    # Encontra a data mais próxima de acontecer
-    closest_event = min(events_sorted, key=lambda x: (x["scheduled"] - now).total_seconds() if x["scheduled"] > now else float('inf'))
-    # Retorna o evento mais próximo de acontecer
-    return closest_event
-
-def most_recent_season_ID(seasons):  # Retorna o ID da temporada mais recente
-    return seasons["stages"][0]["id"]  # Retorna o ID da temporada mais recente
-
-def show_teams(stage):  # Retorna um objeto com as equipes
-    teams = stage['teams']
-    print(f"{Style.BRIGHT+Fore.GREEN}Selecione a equipe para ver mais informações:")
-    for i, team in enumerate(teams):
-        print(f"{Back.YELLOW+Fore.MAGENTA}{i+1}. {team['name']}{Back.RESET}")  # Imprime o nome das equipes
-    teamID = input(f"{Style.RESET_ALL+Fore.LIGHTWHITE_EX}Digite o número da equipe desejada: ")  # Pede ao usuário para digitar o número da equipe desejada
-    teamID = int(teamID) if teamID.isdigit() else 0
-    if teamID < 1 or teamID > len(teams):
-        return print(Fore.RED + "Equipe inválida")
-    os.system('cls' if os.name == 'nt' else 'clear')  # Limpa a tela
-    selected_team = teams[teamID - 1]
-    team_result = selected_team['result']
-    os.system('cls' if os.name == 'nt' else 'clear')
-    print(f"{Fore.GREEN}Informações sobre a equipe {selected_team['name']}:\n")
-    print(f"Nome: {Fore.BLACK+selected_team['name']+Fore.GREEN}")
-    print(f"País: {Fore.BLACK+selected_team['nationality']+Fore.GREEN}")
-    print(f"Pontos nessa temporada: {Fore.BLACK}{team_result.get('points', '0')} {Fore.GREEN}")
-    print(f"Posição no campeonato: {Fore.BLACK}{team_result.get('position', 'N/A')}º lugar{Fore.GREEN}")
-    print(f"Vitórias: {Fore.BLACK}{team_result.get('victories', '0')} {Fore.GREEN}")
-    print(f"Podiums: {Fore.BLACK}{team_result.get('podiums', '0')} {Fore.GREEN}")
-    print(f"Voltas mais rápidas: {Fore.BLACK}{team_result.get('fastest_laps', '0')} {Fore.GREEN}")
-    print(f"Pole Positions: {Fore.BLACK}{team_result.get('pole_positions', '0')} {Fore.GREEN}\n")
-    print(f"Pilotos: {Fore.BLACK}")
-
-    for driver in selected_team['competitors']:
-        driver_result = driver['result']
-        print(f"{Fore.GREEN} {driver_result.get('position', 'N/A')}º lugar - {Fore.CYAN}{driver_result.get('car_number', 'N/A')}{Fore.BLACK} - {' '.join(reversed(driver['name'].split(', ')))} - {driver['nationality']}")
-
-
-def get_stage_infos(seasonID, apiKey):  # Retorna um objeto com as equipes
-    try:
-        url = f"https://api.sportradar.com/formulae/trial/v2/pt/sport_events/{seasonID}/summary.json?api_key={apiKey}"
-        headers = {"accept": "application/json"}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(Fore.RED + "Erro na requisição da API")
-        print(e)
-        exit()
-    return data['stage']  # Retorna o objeto com as equipes
-
-def get_teams_win_probabilities(seasonID, apiKey):  # Retorna um objeto com as probabilidades de vitória das equipes
-    try:
-        url = f"https://api.sportradar.com/formulae/trial/v2/pt/sport_events/{seasonID}/probabilities.json?api_key={apiKey}"
-        headers = {"accept": "application/json"}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(Fore.RED + "Erro na requisição da API")
-        print(e)
-        exit()
-    
-    return data['probabilities']['markets'][0]['outcomes']  # Retorna o objeto com as equipes
-
-main()
+ft.app(target=main)
