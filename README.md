@@ -6,7 +6,6 @@
       - [Objetivo do Projeto](#objetivo-do-projeto)
   - [Execução do projeto](#execução-do-projeto)
   - [Gerar build do projeto](#gerar-build-do-projeto)
-    - [Passos para gerar uma build](#passos-para-gerar-uma-build)
 - [Integrantes do grupo](#integrantes-do-grupo)
 
 ## Hub de informações - Python
@@ -29,7 +28,13 @@ Popularizar a Fórmula E no Brasil, tornando as informações sobre essa categor
 
 ### Execução do projeto
 
-Para executar o projeto, siga as etapas abaixo:
+Você tem duas opções para usar o projeto:
+
+- **Usar uma build existente**: Acesse as versões disponíveis [aqui](https://github.com/Wisers-1ESS/Challenge-Python/releases). **Leia atentamente a descrição da release** para mais detalhes.
+  
+- **Gerar sua própria build**: Siga os passos abaixo.
+
+**Para executar o projeto, siga as seguintes etapas:**
 
 1. Clone o repositório para o seu ambiente local:
 
@@ -80,13 +85,7 @@ Certifique-se de ter o Python e o pip instalados em seu ambiente antes de execut
 
 ### Gerar build do projeto
 
-Você tem duas opções para usar o projeto:
-
-- **Usar uma build existente**: Acesse as versões disponíveis [aqui](https://github.com/Wisers-1ESS/Challenge-Python/releases). **Leia atentamente a descrição da release** para mais detalhes.
-  
-- **Gerar sua própria build**: Siga os passos abaixo.
-
-#### Passos para gerar uma build:
+**Etapas necessárias:**
 
 1. **Pre-requisitos**: Certifique-se de seguir todas as instruções da seção [Execução do projeto](#execução-do-projeto) antes de prosseguir.
 
@@ -103,6 +102,10 @@ Você tem duas opções para usar o projeto:
 #### **IMPORTANTE**: O passo a passo detalhado para cada plataforma está na [documentação do Flet](https://flet.dev/docs/publish).
 
 ---
+
+### Diagrama de blocos do app
+
+![Diagrama de blocos](./assets/Diagrama_Python.png)
 
 ## Integrantes do grupo
 
