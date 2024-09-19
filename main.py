@@ -25,15 +25,15 @@ def main(page: ft.Page):
         fatal_error("Erro ao acessar a API", f"Ocorreu um erro ao acessar a API da Formula E\n\n{error}")
         return
     
-    def reload_app(e):
+    def reload_app(e): #Função para recarregar o app
         page.controls.clear()
         page.update()
         main(page) 
         
-    def fechar_app(e):
+    def fechar_app(e): #Função para fechar o app
         page.window.destroy()
         
-    def fatal_error(msg, error):
+    def fatal_error(msg, error): #Função para exibir um erro fatal
         error_dialog = ft.AlertDialog(
             title=ft.Text(msg),
             content=ft.Text(error),
@@ -44,7 +44,7 @@ def main(page: ft.Page):
         page.update()
     
     
-    def show_probability():
+    def show_probability(): #Função para exibir as probabilidades de vitória das equipes
         for i, team in enumerate(teams_win_probabilities):
             win_probabilities.content.content.controls.append(ft.Text(value=(f"- {team['name']} - {team['probability']}%"), size=18, text_align=ft.TextAlign.LEFT, weight=ft.FontWeight.BOLD, color=ft.colors.PRIMARY))
         
@@ -133,11 +133,11 @@ def main(page: ft.Page):
             ))
         teams_container.update()
     
-    def clear_stack():
+    def clear_stack(): #Função para limpar o container principal
         _stack_main.controls.clear()
         _stack_main.update()
         
-    def on_page_resize(e):
+    def on_page_resize(e): #Função para redimensionar os containers de acordo com o tamanho da janela
         next_event.height = page.window.height - 140
         teams.height = page.window.height - 140
         win_probabilities.height = page.window.height - 140
@@ -145,7 +145,7 @@ def main(page: ft.Page):
     
     page.on_resized = on_page_resize
     
-    def render_next_event():
+    def render_next_event(): #Função para renderizar a página de próximo evento
         _stack_main.controls.append(next_event)
         page.update()
         next_event.content = ft.Container(
@@ -154,7 +154,7 @@ def main(page: ft.Page):
                 horizontal_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     default_title("Próximo Evento da Formula E"),
-                    ft.Divider(height=10, thickness=2),  # Adicionando um divisor
+                    ft.Divider(height=10, thickness=2),
                     ft.Column(
                         scroll=ft.ScrollMode.AUTO,
                         alignment=ft.MainAxisAlignment.CENTER,
@@ -168,7 +168,7 @@ def main(page: ft.Page):
             expand=True
         )
         
-    def render_teams():
+    def render_teams(): #Função para renderizar a página de equipes
         _stack_main.controls.append(teams)
         teams_container = ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -204,7 +204,7 @@ def main(page: ft.Page):
             expand=True,
         )
         
-    def render_win_probabilities():
+    def render_win_probabilities(): #Função para renderizar a página de probabilidade de vitória
         _stack_main.controls.append(win_probabilities)
         win_probabilities.content = ft.Container(
             content=ft.Column(
@@ -226,20 +226,20 @@ def main(page: ft.Page):
         )
         show_probability()
         
-    def navHandler(e):
+    def navHandler(e): #Função para mudar de página
         selected_index = e.control.selected_index
         page.update()
         clear_stack() 
         if selected_index == 0:
-            render_next_event()
+            render_next_event() #Renderiza a página de próximo evento
         elif selected_index == 1:
-            render_teams()
+            render_teams() #Renderiza a página de equipes
         elif selected_index == 2:
-            render_win_probabilities()
+            render_win_probabilities() #Renderiza a página de probabilidade de vitória
         page.update()
         
         
-    page.navigation_bar = ft.NavigationBar(
+    page.navigation_bar = ft.NavigationBar( #Barra de navegação
         on_change=navHandler,
         destinations=[
             ft.NavigationBarDestination(icon=ft.icons.ACCESS_TIME_FILLED, label="Próximo Evento"),
@@ -248,7 +248,7 @@ def main(page: ft.Page):
         ]
     )
     
-    def default_container(text):
+    def default_container(text): #Container padrão para otimizar a criação de containers
         return ft.Container(
             border_radius=10,
             alignment=ft.alignment.center,
@@ -260,7 +260,7 @@ def main(page: ft.Page):
     teams = default_container("Equipes")
     win_probabilities = default_container("Probabilidade de Vitória")
         
-    _main = ft.Container(
+    _main = ft.Container( #Container principal
         width=450,
         alignment=ft.alignment.center,
         expand=True,
@@ -292,7 +292,7 @@ def main(page: ft.Page):
     page.add(_stack_main)
     
 def most_recent_season_ID(seasons):  # Retorna o ID da temporada mais recente
-    return seasons["stages"][0]["id"]  # Retorna o ID da temporada mais recente
+    return seasons["stages"][0]["id"] 
 
 def get_seasons(apiKey):  # Retorna um objeto com todas as temporadas
     url = f"https://api.sportradar.com/formulae/trial/v2/pt/seasons.json?api_key={apiKey}"  # Define a URL da API
@@ -317,13 +317,13 @@ def get_teams_win_probabilities(apiKey, seasonID):  # Retorna um objeto com as p
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
-    return data['probabilities']['markets'][0]['outcomes']  # Retorna o objeto com as equipes
+    return data['probabilities']['markets'][0]['outcomes']  # Retorna o objeto com as probabilidades de vitória das equipes
 
 def closest_event(events):
     timezone_br = timezone(timedelta(hours=-3))
     # Converte a data de string para datetime e ajusta o fuso horário para o horário de Brasília
-    if events['id'] == None:
-        return []
+    if events['id'] == None: #verifica se o evento está ocorrendo
+       return []
     else:
         for stage in events['stages']:
             stage['scheduled'] = datetime.fromisoformat(stage["scheduled"]).astimezone(timezone_br)
