@@ -6,6 +6,7 @@
       - [Objetivo do Projeto](#objetivo-do-projeto)
   - [Execução do projeto](#execução-do-projeto)
   - [Gerar build do projeto](#gerar-build-do-projeto)
+  - [Diagrama em Blocos](#diagrama-de-blocos-do-app)
 - [Integrantes do grupo](#integrantes-do-grupo)
 
 ## Hub de informações - Python
