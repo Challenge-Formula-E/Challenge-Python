@@ -43,10 +43,27 @@ def main(page: ft.Page):
         error_dialog.open = True
         page.update()
     
+    def check_teams(): #Função para verificar se há equipes cadastradas
+        teams = stage_infos.get('teams') 
+        if teams:  # Verifica se 'teams' existe e não é None ou vazio
+            return [ft.dropdown.Option(team['name']) for team in teams]
+        else:
+            return [
+                ft.dropdown.Option("Não há equipes cadastradas para essa temporada ainda", disabled=True)
+            ]
     
     def show_probability(): #Função para exibir as probabilidades de vitória das equipes
-        for i, team in enumerate(teams_win_probabilities):
-            win_probabilities.content.content.controls.append(ft.Text(value=(f"- {team['name']} - {team['probability']}%"), size=18, text_align=ft.TextAlign.LEFT, weight=ft.FontWeight.BOLD, color=ft.colors.PRIMARY))
+        if(teams_win_probabilities == []):
+            win_probabilities.content.content.controls.append(ft.Text(
+                value="Muito Cedo para Previsões",
+                size=24,
+                text_align=ft.TextAlign.LEFT,
+                weight=ft.FontWeight.BOLD,
+                color=ft.colors.ERROR
+            ))
+        else:
+            for i, team in enumerate(teams_win_probabilities):
+                win_probabilities.content.content.controls.append(ft.Text(value=(f"- {team['name']} - {team['probability']}%"), size=18, text_align=ft.TextAlign.LEFT, weight=ft.FontWeight.BOLD, color=ft.colors.PRIMARY))
         
     def default_text(text, color=ft.colors.SECONDARY, weight=ft.FontWeight.W_500):
         return ft.Text(
@@ -190,7 +207,7 @@ def main(page: ft.Page):
                         controls=[
                             ft.Dropdown(
                                 label="Selecione uma equipe",
-                                options=[ft.dropdown.Option(team['name']) for team in stage_infos['teams']],  # Aqui usamos um 'for' para criar as opções
+                                options=check_teams(),  # Aqui usamos um 'for' para criar as opções
                                 on_change=lambda e: selecionar_equipe(e, teams_container)  # Função que será chamada quando o valor do Dropdown mudar
                             ),
                             ft.Container(height=20)
@@ -317,7 +334,10 @@ def get_teams_win_probabilities(apiKey, seasonID):  # Retorna um objeto com as p
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
-    return data['probabilities']['markets'][0]['outcomes']  # Retorna o objeto com as probabilidades de vitória das equipes
+    try:
+        return data['probabilities']['markets'][0]['outcomes']
+    except (KeyError, IndexError):
+        return []
 
 def closest_event(events):
     timezone_br = timezone(timedelta(hours=-3))
